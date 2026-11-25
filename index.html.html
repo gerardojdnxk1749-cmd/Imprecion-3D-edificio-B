@@ -1,0 +1,1377 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>IHM 2026-B | Realidad Aumentada - Edificio B (ICO)</title>
+
+  <!-- Tailwind CSS -->
+  <script src="https://cdn.tailwindcss.com"></script>
+
+  <!-- Google Fonts: Inter -->
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+
+  <!-- Generador QR oficial (qrcode-generator) estándar ISO/IEC 18004 -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcode-generator/1.4.4/qrcode.min.js"></script>
+
+  <!-- Three.js -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          fontFamily: {
+            sans: ['Inter', 'system-ui', 'sans-serif'],
+          },
+          colors: {
+            uaemGreen: '#1B5E20',
+            uaemGold: '#C99700',
+          }
+        }
+      }
+    };
+  </script>
+
+  <style>
+    body {
+      font-family: 'Inter', system-ui, sans-serif;
+    }
+
+    /* Estilos de impresión limpios para el Marcador QR y Ficha ID */
+    @media print {
+      body {
+        background: #ffffff !important;
+        color: #111827 !important;
+      }
+      .no-print {
+        display: none !important;
+      }
+      .print-only-container {
+        box-shadow: none !important;
+        border: 1.5px solid #111827 !important;
+        margin: 0 !important;
+        max-width: 100% !important;
+        padding: 16px !important;
+      }
+      .print-break-avoid {
+        break-inside: avoid;
+      }
+    }
+
+    /* Animación sutil de escaneo para la simulación de cámara */
+    @keyframes scanLine {
+      0%, 100% { transform: translateY(0%); opacity: 0.35; }
+      50% { transform: translateY(220px); opacity: 0.95; }
+    }
+    .scan-beam {
+      animation: scanLine 2.8s ease-in-out infinite;
+    }
+  </style>
+</head>
+<body class="bg-slate-950 text-slate-100 min-h-screen flex flex-col selection:bg-emerald-500 selection:text-white">
+
+  <!-- Encabezado principal de la aplicación -->
+  <header class="no-print bg-slate-900/90 backdrop-blur border-b border-slate-800 sticky top-0 z-30">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+      <div class="flex items-start sm:items-center gap-3">
+        <div class="w-11 h-11 rounded-2xl bg-gradient-to-br from-emerald-600 to-amber-500 flex items-center justify-center font-extrabold text-slate-950 shadow-lg shrink-0">
+          AR
+        </div>
+        <div>
+          <div class="flex flex-wrap items-center gap-2">
+            <h1 class="text-lg sm:text-xl font-bold tracking-tight text-white">
+              Interacción Hombre Máquina (IHM 2026-B)
+            </h1>
+            <span class="px-2.5 py-0.5 text-xs font-semibold rounded-full bg-emerald-500/15 text-emerald-300 border border-emerald-500/30">
+              Entrega: 26/11/2026
+            </span>
+          </div>
+          <p class="text-xs sm:text-sm text-slate-400">
+            Juan Gerardo Sánchez Sánchez · Ingeniería en Computación (ICO) · Edificio B - CU UAEM Valle de Teotihuacán
+          </p>
+        </div>
+      </div>
+
+      <!-- Selector de pestañas principales -->
+      <nav class="flex bg-slate-800/90 p-1 rounded-2xl border border-slate-700/80 self-start md:self-auto" role="tablist" aria-label="Vistas del proyecto">
+        <button
+          id="tab-printable"
+          role="tab"
+          aria-selected="true"
+          onclick="switchTab('printable')"
+          class="px-3.5 py-2.5 rounded-xl text-xs sm:text-sm font-semibold transition-all flex items-center gap-2 bg-emerald-600 text-white shadow"
+        >
+          <span>Objeto Imprimible (QR y Ficha ID)</span>
+        </button>
+        <button
+          id="tab-webar"
+          role="tab"
+          aria-selected="false"
+          onclick="switchTab('webar')"
+          class="px-3.5 py-2.5 rounded-xl text-xs sm:text-sm font-semibold transition-all flex items-center gap-2 text-slate-300 hover:text-white"
+        >
+          <span>Vista 3D y WebAR</span>
+        </button>
+      </nav>
+    </div>
+  </header>
+
+  <!-- Banner de notificación / mensaje (reemplaza alert()) -->
+  <div id="status-toast" class="no-print hidden fixed bottom-5 right-5 z-50 max-w-sm bg-slate-900 border border-emerald-500/50 text-slate-100 px-4 py-3 rounded-2xl shadow-2xl flex items-center justify-between gap-3">
+    <span id="status-toast-text" class="text-sm font-medium"></span>
+    <button onclick="hideToast()" class="text-xs px-2.5 py-1 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 font-semibold">
+      Cerrar
+    </button>
+  </div>
+
+  <!-- Contenido Principal -->
+  <main class="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-8">
+
+    <!-- ===================================================================== -->
+    <!-- VISTA 1: OBJETO IMPRIMIBLE (CÓDIGO QR Y FICHA ID)                     -->
+    <!-- ===================================================================== -->
+    <section id="view-printable" role="tabpanel" aria-labelledby="tab-printable" class="space-y-6">
+
+      <!-- Barra de acciones superior -->
+      <div class="no-print flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 bg-slate-900/70 border border-slate-800 rounded-2xl p-4">
+        <div>
+          <h2 class="text-base sm:text-lg font-bold text-white">Hoja Imprimible de Código QR Escaneable y Datos de Identificación</h2>
+          <p class="text-xs sm:text-sm text-slate-400">
+            El código QR cumple el estándar ISO/IEC 18004 para que cualquier cámara de celular lo lea al instante.
+          </p>
+        </div>
+        <div class="flex flex-wrap items-center gap-3">
+          <button
+            onclick="setQrPreset('ficha')"
+            class="px-4 py-2.5 rounded-xl text-xs sm:text-sm font-semibold bg-amber-500/20 hover:bg-amber-500/30 text-amber-200 border border-amber-500/40 transition"
+          >
+            QR Ficha Directa (Sin Internet)
+          </button>
+          <button
+            onclick="setQrPreset('webar')"
+            class="px-4 py-2.5 rounded-xl text-xs sm:text-sm font-semibold bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 transition"
+          >
+            QR Enlace GitHub Pages
+          </button>
+          <button
+            onclick="window.print()"
+            class="px-5 py-2.5 rounded-xl text-xs sm:text-sm font-bold bg-gradient-to-r from-emerald-600 to-emerald-500 hover:from-emerald-500 hover:to-emerald-400 text-white shadow-lg transition flex items-center gap-2"
+          >
+            <span>Print Sheet</span>
+            <span class="text-xs opacity-90">(Imprimir)</span>
+          </button>
+        </div>
+      </div>
+
+      <!-- Configurador de URL + Guía rápida GitHub Pages (oculto al imprimir) -->
+      <div class="no-print bg-slate-900/90 border border-emerald-500/30 rounded-2xl p-4 space-y-3">
+        <div class="flex flex-col lg:flex-row lg:items-center gap-3 justify-between">
+          <div class="space-y-0.5">
+            <p class="text-xs sm:text-sm font-bold text-emerald-300">Destino del Código QR (URL de GitHub Pages que abrirá tu celular):</p>
+            <p class="text-xs text-slate-400">
+              Pega aquí el enlace <code class="text-emerald-300">https://tu-usuario.github.io/edificio-b-ar/?vista=3d</code> y el QR se regenerará automáticamente.
+            </p>
+          </div>
+          <div class="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 w-full lg:w-auto">
+            <input
+              id="qr-target-url"
+              type="url"
+              placeholder="https://tu-usuario.github.io/edificio-b-ar/?vista=3d"
+              oninput="updateQrCodeFromInput()"
+              class="w-full sm:w-80 px-3.5 py-2 rounded-xl bg-slate-950 border border-slate-700 text-xs sm:text-sm text-white placeholder:text-slate-500 focus:outline-none focus:border-emerald-500"
+            />
+            <button
+              onclick="useCurrentPageUrl()"
+              class="px-3.5 py-2 rounded-xl text-xs font-semibold bg-emerald-600/20 hover:bg-emerald-600/30 text-emerald-300 border border-emerald-500/40 transition shrink-0"
+            >
+              Usar URL Actual
+            </button>
+          </div>
+        </div>
+
+        <details class="bg-slate-950/80 border border-slate-800 rounded-xl p-3 text-xs text-slate-300">
+          <summary class="cursor-pointer font-bold text-amber-300 select-none">
+            ¿Cómo subir este archivo a GitHub Pages gratis en 2 minutos para que el QR abra el 3D? (Clic aquí)
+          </summary>
+          <ol class="list-decimal list-inside mt-2 space-y-1 text-slate-300 leading-relaxed">
+            <li>Guarda este código en tu computadora con el nombre exacto <strong>index.html</strong>.</li>
+            <li>Entra a <strong>github.com</strong>, crea un repositorio público llamado <strong>edificio-b-ar</strong> y sube el archivo <strong>index.html</strong> (<em>Add file &rarr; Upload files &rarr; Commit changes</em>).</li>
+            <li>Ve a <strong>Settings &rarr; Pages</strong>, en <em>Branch</em> selecciona <strong>main</strong> y haz clic en <strong>Save</strong>.</li>
+            <li>Copia el enlace generado (<code class="text-emerald-300">https://tu-usuario.github.io/edificio-b-ar/?vista=3d</code>), pégalo arriba y vuelve a imprimir o escanear el QR.</li>
+          </ol>
+        </details>
+      </div>
+
+      <!-- Hoja Imprimible (diseñada con alto contraste y legible tanto en pantalla como en papel) -->
+      <div class="print-only-container bg-white text-slate-900 rounded-3xl shadow-2xl border border-slate-200 p-5 sm:p-8 lg:p-10">
+
+        <!-- Encabezado Institucional y de Materia -->
+        <div class="print-break-avoid flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4 pb-6 border-b-2 border-slate-900">
+          <div>
+            <div class="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-emerald-900 text-white text-xs font-bold uppercase tracking-wider mb-2">
+              Marcador Oficial de Realidad Aumentada · IHM 2026-B
+            </div>
+            <h3 class="text-2xl sm:text-3xl font-extrabold text-slate-950 tracking-tight">
+              Edificio B — Centro Universitario UAEM Valle de Teotihuacán
+            </h3>
+            <p class="text-sm font-medium text-slate-700 mt-1">
+              Reposición de Trabajo en Clase · Demostración 3D y Descripción de Carrera (ICO)
+            </p>
+          </div>
+
+          <div class="bg-slate-100 border border-slate-300 rounded-2xl p-3.5 text-xs sm:text-sm shrink-0">
+            <p><span class="font-bold text-slate-900">Materia:</span> Interacción Hombre Máquina (IHM 2026-B)</p>
+            <p><span class="font-bold text-slate-900">Profesor:</span> Pablo González Silva</p>
+            <p><span class="font-bold text-slate-900">Fecha de entrega:</span> 26/11/2026</p>
+          </div>
+        </div>
+
+        <!-- Cuerpo Principal: Ficha ID + Código QR Escaneable -->
+        <div class="grid grid-cols-1 lg:grid-cols-12 gap-7 py-7 items-center">
+
+          <!-- Columna Izquierda: Datos de Identificación (ID) del Alumno -->
+          <div class="lg:col-span-6 space-y-4 print-break-avoid">
+            <div class="bg-slate-50 border-2 border-slate-900 rounded-2xl p-5 sm:p-6 space-y-3.5">
+              <div class="flex items-center justify-between border-b border-slate-300 pb-2.5">
+                <span class="text-xs font-extrabold uppercase tracking-widest text-emerald-900">
+                  Ficha de Identificación (ID)
+                </span>
+                <span class="text-xs font-mono font-bold px-2.5 py-0.5 rounded bg-amber-300/60 text-slate-950">
+                  OBJETO IMPRESO AR
+                </span>
+              </div>
+
+              <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 text-sm">
+                <div class="sm:col-span-2 bg-white p-3 rounded-xl border border-slate-200">
+                  <p class="text-[11px] uppercase font-bold text-slate-500">Nombre completo</p>
+                  <p class="text-base font-extrabold text-slate-950">Juan Gerardo Sánchez Sánchez</p>
+                </div>
+
+                <div class="sm:col-span-2 bg-white p-3 rounded-xl border border-slate-200">
+                  <p class="text-[11px] uppercase font-bold text-slate-500">Carrera</p>
+                  <p class="font-bold text-slate-900">Ingeniería en Computación (ICO)</p>
+                </div>
+
+                <div class="sm:col-span-2 bg-white p-3 rounded-xl border border-slate-200">
+                  <p class="text-[11px] uppercase font-bold text-slate-500">Institución</p>
+                  <p class="font-bold text-slate-900">Centro Universitario UAEM Valle de Teotihuacán</p>
+                </div>
+
+                <div class="bg-white p-3 rounded-xl border border-slate-200">
+                  <p class="text-[11px] uppercase font-bold text-slate-500">Tema / Objeto 3D</p>
+                  <p class="font-bold text-slate-900">Edificio B (2 Pisos · AR)</p>
+                </div>
+
+                <div class="bg-white p-3 rounded-xl border border-slate-200">
+                  <p class="text-[11px] uppercase font-bold text-slate-500">Entrega</p>
+                  <p class="font-bold text-slate-900">26/11/2026</p>
+                </div>
+              </div>
+            </div>
+
+            <!-- Instrucciones rápidas para apuntar con el celular -->
+            <div class="bg-emerald-50 border border-emerald-300 rounded-2xl p-4 text-xs sm:text-sm text-slate-800 space-y-1.5">
+              <p class="font-bold text-emerald-950">Instrucciones de uso con el celular:</p>
+              <ol class="list-decimal list-inside space-y-1 text-slate-700">
+                <li>Imprime esta hoja completa manteniendo el margen blanco alrededor del QR.</li>
+                <li>Colócala sobre una superficie plana con buena iluminación y sin reflejos.</li>
+                <li>Apunta la cámara de tu celular al <strong>Código QR</strong> de la derecha para visualizar el <strong>Edificio B en 3D</strong> y la descripción de <strong>Ingeniería en Computación (ICO)</strong>.</li>
+              </ol>
+            </div>
+          </div>
+
+          <!-- Columna Derecha: Código QR Estándar Escaneable -->
+          <div class="lg:col-span-6 flex flex-col items-center justify-center print-break-avoid">
+            <div class="bg-white border-4 border-slate-950 rounded-3xl p-4 sm:p-5 shadow-md flex flex-col items-center">
+              <p class="text-[11px] font-extrabold uppercase tracking-widest text-slate-800 mb-2">
+                Código QR Escaneable &amp; Marcador AR
+              </p>
+
+              <!-- Contenedor cuadrado del Código QR estándar con zona de silencio (quiet zone) blanca -->
+              <div class="relative w-64 h-64 sm:w-72 sm:h-72 bg-white border-2 border-slate-950 p-3 flex items-center justify-center">
+                <canvas id="arMarkerCanvas" class="w-full h-full block"></canvas>
+              </div>
+
+              <p id="qr-encoded-preview" class="mt-2.5 max-w-[270px] truncate text-[11px] font-mono font-semibold text-emerald-900 bg-emerald-50 px-2.5 py-1 rounded-lg border border-emerald-200">
+                QR listo para cámara móvil
+              </p>
+
+              <div class="mt-2 w-full flex items-center justify-between text-[11px] font-mono text-slate-700 border-t border-slate-200 pt-2">
+                <span>ESTÁNDAR: ISO QR-M</span>
+                <span id="markerSeedLabel" class="font-bold">UAEM · EDIFICIO B (ICO)</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Requerimientos para la creación y visualización del objeto AR -->
+        <div class="print-break-avoid pt-6 border-t-2 border-slate-900 grid grid-cols-1 md:grid-cols-2 gap-6">
+          <div class="bg-slate-50 border border-slate-300 rounded-2xl p-5">
+            <h4 class="text-sm font-extrabold uppercase tracking-wider text-slate-950 mb-2.5">
+              Requerimientos para la Creación del Objeto AR
+            </h4>
+            <ul class="list-disc list-inside text-xs sm:text-sm text-slate-700 space-y-1.5">
+              <li><strong>Diseño del código QR impreso:</strong> Código QR estándar ISO/IEC 18004 de alto contraste (blanco y negro con zona de silencio y corrección de errores nivel M) para lectura inmediata en cualquier smartphone.</li>
+              <li><strong>Modelado 3D del Edificio B:</strong> Estructura arquitectónica real de dos pisos (Planta Baja y Primer Nivel) en verde bosque institucional y blanco, con entrada principal central de doble altura, dos salidas laterales y rotulación oficial del CU UAEM Valle de Teotihuacán.</li>
+              <li><strong>Información académica integrada:</strong> Ficha de identificación del estudiante y descripción sintética de la carrera Ingeniería en Computación (ICO).</li>
+            </ul>
+          </div>
+
+          <div class="bg-slate-50 border border-slate-300 rounded-2xl p-5">
+            <h4 class="text-sm font-extrabold uppercase tracking-wider text-slate-950 mb-2.5">
+              Requerimientos para la Visualización en Celular
+            </h4>
+            <ul class="list-disc list-inside text-xs sm:text-sm text-slate-700 space-y-1.5">
+              <li><strong>Dispositivo móvil:</strong> Smartphone con cámara trasera funcional, navegador actualizado (Chrome / Safari) y conexión a internet.</li>
+              <li><strong>Iluminación y distancia:</strong> Luz uniforme sin reflejos intensos sobre el papel impreso; mantener una distancia de 20 a 45 cm entre la cámara y el código QR.</li>
+              <li><strong>Alojamiento Web HTTPS:</strong> Publicación del archivo <code class="font-mono">index.html</code> en GitHub Pages, Vercel o Netlify para acceso directo desde el enlace del QR.</li>
+            </ul>
+          </div>
+        </div>
+
+      </div>
+    </section>
+
+    <!-- ===================================================================== -->
+    <!-- VISTA 2: VISTA 3D Y WEBAR                                             -->
+    <!-- ===================================================================== -->
+    <section id="view-webar" role="tabpanel" aria-labelledby="tab-webar" class="hidden space-y-6">
+
+      <!-- Controles superiores: Modo Cámara/Marcador vs Explorar 3D + Acciones -->
+      <div class="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4 bg-slate-900/80 border border-slate-800 rounded-2xl p-4">
+        <div class="space-y-1">
+          <h2 class="text-base sm:text-lg font-bold text-white">
+            Visualización 3D: Edificio B (2 Pisos) — CU UAEM Valle de Teotihuacán
+          </h2>
+          <p class="text-xs sm:text-sm text-slate-400">
+            Arrastra con el mouse o desliza con el dedo para rotar el ángulo de cámara. Usa el botón para alternar entre simulación de cámara con marcador y exploración 3D libre.
+          </p>
+        </div>
+
+        <div class="flex flex-wrap items-center gap-2.5">
+          <!-- Toggle Modo Simulación de Cámara / Marcador vs Explorar 3D -->
+          <div class="inline-flex rounded-xl bg-slate-800 p-1 border border-slate-700">
+            <button
+              id="btn-mode-camera"
+              onclick="setSceneMode('camera')"
+              class="px-3.5 py-2 rounded-lg text-xs sm:text-sm font-semibold bg-emerald-600 text-white shadow transition"
+            >
+              Simulación de Cámara / Marcador
+            </button>
+            <button
+              id="btn-mode-explore"
+              onclick="setSceneMode('explore')"
+              class="px-3.5 py-2 rounded-lg text-xs sm:text-sm font-semibold text-slate-300 hover:text-white transition"
+            >
+              Explorar 3D
+            </button>
+          </div>
+
+          <button
+            id="btn-toggle-marker-lock"
+            onclick="toggleMarkerDetected()"
+            class="px-3.5 py-2.5 rounded-xl text-xs sm:text-sm font-semibold bg-amber-500/15 hover:bg-amber-500/25 text-amber-300 border border-amber-500/40 transition"
+          >
+            Simular Detección: Activa
+          </button>
+
+          <button
+            onclick="resetCameraView()"
+            class="px-3.5 py-2.5 rounded-xl text-xs sm:text-sm font-semibold bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 transition"
+          >
+            Reiniciar Vista
+          </button>
+        </div>
+      </div>
+
+      <!-- Grid principal: Escena 3D + Tarjeta Flotante ICO -->
+      <div class="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
+
+        <!-- Contenedor del Canvas Three.js (8 columnas en desktop) -->
+        <div class="lg:col-span-8 relative rounded-3xl overflow-hidden border border-slate-800 bg-slate-900 shadow-2xl min-h-[430px] sm:min-h-[520px]">
+
+          <!-- Canvas 3D -->
+          <canvas id="threeCanvas" class="w-full h-[430px] sm:h-[520px] block cursor-grab active:cursor-grabbing"></canvas>
+
+          <!-- Overlay de Simulación de Cámara / Marcador -->
+          <div id="camera-hud-overlay" class="pointer-events-none absolute inset-0 flex flex-col justify-between p-4 sm:p-5">
+            <!-- Barra superior HUD -->
+            <div class="flex items-center justify-between gap-2">
+              <div class="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-slate-950/75 backdrop-blur border border-emerald-400/30 text-xs font-semibold text-emerald-300">
+                <span class="w-2 h-2 rounded-full bg-emerald-400 animate-ping"></span>
+                <span id="hud-mode-label">CÁMARA AR · MARCADOR DETECTADO</span>
+              </div>
+              <div class="px-3 py-1.5 rounded-full bg-slate-950/75 backdrop-blur border border-slate-700/80 text-[11px] font-mono text-slate-300">
+                UAEM · EDIFICIO B (2 PISOS)
+              </div>
+            </div>
+
+            <!-- Marco central de mira / escaneo -->
+            <div id="reticle-box" class="relative mx-auto w-44 h-44 sm:w-52 sm:h-52 border-2 border-dashed border-emerald-400/50 rounded-2xl flex items-center justify-center">
+              <div class="scan-beam absolute top-0 left-2 right-2 h-0.5 bg-gradient-to-r from-transparent via-emerald-400 to-transparent"></div>
+              <span id="reticle-status-text" class="px-2.5 py-1 rounded-lg bg-slate-950/80 text-[11px] font-semibold text-emerald-200 text-center">
+                Anclaje 3D activo sobre marcador
+              </span>
+            </div>
+
+            <!-- Pie inferior HUD -->
+            <div class="flex flex-wrap items-center justify-between gap-2 bg-slate-950/75 backdrop-blur border border-slate-800 rounded-2xl px-3.5 py-2.5 text-xs text-slate-300">
+              <span><strong>Alumno:</strong> Juan Gerardo Sánchez Sánchez</span>
+              <span><strong>Carrera:</strong> Ingeniería en Computación (ICO)</span>
+            </div>
+          </div>
+
+          <!-- Etiqueta flotante superior izquierda del edificio -->
+          <div class="pointer-events-none absolute top-16 left-4 sm:left-5 bg-slate-950/80 backdrop-blur border border-slate-700/80 rounded-2xl px-3.5 py-2 text-xs">
+            <p class="font-bold text-amber-400">Edificio B — 2 Niveles (Entrada Central + 2 Salidas Laterales)</p>
+            <p class="text-slate-300 text-[11px]">CU UAEM Valle de Teotihuacán</p>
+          </div>
+        </div>
+
+        <!-- Tarjeta Flotante / Lateral de Información de Carrera ICO (4 columnas en desktop) -->
+        <aside class="lg:col-span-4 space-y-5">
+          <div class="bg-gradient-to-b from-slate-900 to-slate-900/95 border border-emerald-500/30 rounded-3xl p-5 sm:p-6 shadow-xl space-y-4">
+            <div class="flex items-center justify-between">
+              <span class="px-3 py-1 rounded-full text-xs font-bold bg-emerald-500/15 text-emerald-300 border border-emerald-500/30">
+                Descripción de Carrera
+              </span>
+              <span class="text-xs font-mono text-amber-400 font-bold">ICO</span>
+            </div>
+
+            <h3 class="text-xl font-extrabold text-white leading-snug">
+              Ingeniería en Computación (ICO)
+            </h3>
+
+            <p class="text-sm text-slate-300 leading-relaxed">
+              La <strong>Ingeniería en Computación</strong> forma profesionistas capaces de diseñar, implementar, administrar y optimizar soluciones tecnológicas integrales mediante el dominio de:
+            </p>
+
+            <ul class="space-y-2.5 text-xs sm:text-sm text-slate-200">
+              <li class="flex items-start gap-2.5 bg-slate-800/60 p-3 rounded-2xl border border-slate-700/60">
+                <span class="w-2 h-2 mt-1.5 rounded-full bg-emerald-400 shrink-0"></span>
+                <div>
+                  <strong class="text-white">Ingeniería de Software:</strong> Desarrollo de aplicaciones, arquitectura de sistemas, bases de datos y calidad de software.
+                </div>
+              </li>
+              <li class="flex items-start gap-2.5 bg-slate-800/60 p-3 rounded-2xl border border-slate-700/60">
+                <span class="w-2 h-2 mt-1.5 rounded-full bg-amber-400 shrink-0"></span>
+                <div>
+                  <strong class="text-white">Hardware y Sistemas Embebidos:</strong> Arquitectura de computadoras, microcontroladores, sensores y electrónica digital aplicada.
+                </div>
+              </li>
+              <li class="flex items-start gap-2.5 bg-slate-800/60 p-3 rounded-2xl border border-slate-700/60">
+                <span class="w-2 h-2 mt-1.5 rounded-full bg-sky-400 shrink-0"></span>
+                <div>
+                  <strong class="text-white">Redes de Computadoras:</strong> Conectividad, protocolos, infraestructura distribuida y seguridad informática.
+                </div>
+              </li>
+              <li class="flex items-start gap-2.5 bg-slate-800/60 p-3 rounded-2xl border border-slate-700/60">
+                <span class="w-2 h-2 mt-1.5 rounded-full bg-purple-400 shrink-0"></span>
+                <div>
+                  <strong class="text-white">Interacción Hombre-Máquina (IHM):</strong> Interfaces centradas en el usuario, usabilidad, accesibilidad y Realidad Aumentada / Extendida.
+                </div>
+              </li>
+            </ul>
+
+            <div class="pt-2 border-t border-slate-800 text-xs text-slate-400 flex items-center justify-between">
+              <span>Autor: Juan Gerardo Sánchez Sánchez</span>
+              <span class="text-emerald-400 font-semibold">IHM 2026-B</span>
+            </div>
+          </div>
+        </aside>
+      </div>
+
+      <!-- Sección de Snippet Copiable AR.js + A-Frame para Detección con Cámara Móvil -->
+      <div class="bg-slate-900/90 border border-slate-800 rounded-3xl p-5 sm:p-6 shadow-xl space-y-4">
+        <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+          <div>
+            <h3 class="text-base sm:text-lg font-bold text-white">
+              Código Base WebAR (AR.js + A-Frame) para Cámara del Celular
+            </h3>
+            <p class="text-xs sm:text-sm text-slate-400">
+              Copia este fragmento HTML para desplegarlo en un servidor HTTPS y detectar el marcador desde el navegador móvil.
+            </p>
+          </div>
+          <button
+            onclick="copyWebArSnippet()"
+            class="px-4 py-2.5 rounded-xl text-xs sm:text-sm font-bold bg-emerald-600 hover:bg-emerald-500 text-white shadow transition self-start sm:self-auto"
+          >
+            Copiar Snippet AR.js + A-Frame
+          </button>
+        </div>
+
+        <pre class="bg-slate-950 border border-slate-800 rounded-2xl p-4 overflow-x-auto text-xs font-mono text-emerald-200 leading-relaxed"><code id="webar-code-snippet">&lt;!DOCTYPE html&gt;
+&lt;html lang="es"&gt;
+&lt;head&gt;
+  &lt;meta charset="UTF-8" /&gt;
+  &lt;meta name="viewport" content="width=device-width, initial-scale=1.0" /&gt;
+  &lt;title&gt;WebAR Edificio B - CU UAEM Valle de Teotihuacán (ICO)&lt;/title&gt;
+  &lt;script src="https://aframe.io/releases/1.4.2/aframe.min.js"&gt;&lt;/script&gt;
+  &lt;script src="https://raw.githack.com/AR-js-org/AR.js/master/aframe/build/aframe-ar.js"&gt;&lt;/script&gt;
+&lt;/head&gt;
+&lt;body style="margin: 0; overflow: hidden; font-family: sans-serif;"&gt;
+  &lt;!-- Tarjeta informativa de la carrera ICO --&gt;
+  &lt;div style="position: fixed; bottom: 14px; left: 14px; right: 14px; z-index: 10; background: rgba(15,23,42,0.88); color: #fff; padding: 12px 16px; border-radius: 14px; border: 1px solid #10b981;"&gt;
+    &lt;strong&gt;Edificio B — CU UAEM Valle de Teotihuacán&lt;/strong&gt; &amp;middot; &lt;span&gt;Juan Gerardo Sánchez Sánchez (ICO)&lt;/span&gt;
+    &lt;p style="margin: 4px 0 0; font-size: 12px; color: #cbd5e1;"&gt;
+      Ingeniería en Computación (ICO): Ingeniería de Software, Hardware y Sistemas Embebidos, Redes de Computadoras e Interacción Hombre-Máquina (IHM).
+    &lt;/p&gt;
+  &lt;/div&gt;
+
+  &lt;a-scene embedded arjs="sourceType: webcam; debugUIEnabled: false;"&gt;
+    &lt;!-- Marcador Hiro / personalizado (.patt) --&gt;
+    &lt;a-marker preset="hiro"&gt;
+      &lt;!-- Base de pasto y andadores del Edificio B --&gt;
+      &lt;a-box position="0 0.02 0" width="3.8" height="0.04" depth="2.1" color="#4d7c2c"&gt;&lt;/a-box&gt;
+      &lt;a-box position="0 0.045 0.65" width="0.55" height="0.02" depth="0.8" color="#e2e8f0"&gt;&lt;/a-box&gt;
+      &lt;!-- Cuerpo principal de 2 pisos (Planta Baja y Primer Nivel) --&gt;
+      &lt;a-box position="0 0.65 0" width="3.2" height="1.2" depth="1.05" color="#f4f6f5"&gt;&lt;/a-box&gt;
+      &lt;!-- Franja / cornisa superior verde bosque institucional --&gt;
+      &lt;a-box position="0 1.16 0" width="3.26" height="0.24" depth="1.11" color="#1d5b34"&gt;&lt;/a-box&gt;
+      &lt;!-- Faldón blanco divisorio entre planta baja y segundo piso --&gt;
+      &lt;a-box position="0 0.64 0" width="3.25" height="0.14" depth="1.12" color="#f4f6f5"&gt;&lt;/a-box&gt;
+      &lt;!-- Módulo central vertical verde con acceso principal de doble altura --&gt;
+      &lt;a-box position="0 0.65 0.02" width="0.56" height="1.24" depth="1.12" color="#1d5b34"&gt;&lt;/a-box&gt;
+      &lt;a-box position="0 0.56 0.58" width="0.4" height="0.98" depth="0.04" color="#0f172a"&gt;&lt;/a-box&gt;
+      &lt;!-- Dos salidas laterales (izquierda y derecha) --&gt;
+      &lt;a-box position="-1.61 0.28 0" width="0.04" height="0.46" depth="0.34" color="#0f172a"&gt;&lt;/a-box&gt;
+      &lt;a-box position="1.61 0.28 0" width="0.04" height="0.46" depth="0.34" color="#0f172a"&gt;&lt;/a-box&gt;
+      &lt;!-- Letra B y letrero institucional UAEM Valle de Teotihuacán --&gt;
+      &lt;a-text value="B" position="-1.52 1.15 0.57" scale="0.75 0.75 0.75" color="#ffffff"&gt;&lt;/a-text&gt;
+      &lt;a-text value="UAEM Valle de Teotihuacan" position="0.34 1.16 0.57" scale="0.32 0.32 0.32" color="#facc15"&gt;&lt;/a-text&gt;
+    &lt;/a-marker&gt;
+    &lt;a-entity camera&gt;&lt;/a-entity&gt;
+  &lt;/a-scene&gt;
+&lt;/body&gt;
+&lt;/html&gt;</code></pre>
+      </div>
+
+    </section>
+  </main>
+
+  <!-- Pie de página -->
+  <footer class="no-print border-t border-slate-800/80 bg-slate-950 py-5 px-4 text-center text-xs text-slate-400">
+    <p>
+      Proyecto Académico · Interacción Hombre Máquina (IHM 2026-B) · Prof. Pablo González Silva · Entrega: 26/11/2026
+    </p>
+  </footer>
+
+  <!-- ======================================================================= -->
+  <!-- JAVASCRIPT: CÓDIGO QR, NAVEGACIÓN DE PESTAÑAS Y ESCENA 3D THREE.JS      -->
+  <!-- ======================================================================= -->
+  <script>
+    // Estado global de la aplicación
+    let currentTab = 'printable';
+    let sceneMode = 'camera'; // 'camera' | 'explore'
+    let markerDetected = true;
+    let qrMode = 'webar'; // 'webar' | 'ficha'
+
+    // Variables de Three.js
+    let threeRenderer, threeScene, threeCamera;
+    let buildingGroup, markerBaseGroup, gridHelper;
+    let isDragging = false;
+    let prevPointer = { x: 0, y: 0 };
+    let targetRotation = { x: 0.36, y: -0.52 };
+    let currentRotation = { x: 0.36, y: -0.52 };
+    let cameraDistance = 8.4;
+    let threeInitialized = false;
+
+    /**
+     * Obtiene el contenido que codificará el QR para que cualquier celular lo lea
+     */
+    function getEffectiveQrUrl() {
+      if (qrMode === 'ficha') {
+        return [
+          'IHM 2026-B | REALIDAD AUMENTADA',
+          'Alumno: Juan Gerardo Sanchez Sanchez',
+          'Carrera: Ingenieria en Computacion (ICO)',
+          'Sede: Edificio B (2 pisos) - CU UAEM Valle de Teotihuacan',
+          'Prof: Pablo Gonzalez Silva | Entrega: 26/11/2026'
+        ].join('\n');
+      }
+
+      const inputEl = document.getElementById('qr-target-url');
+      const typed = inputEl ? inputEl.value.trim() : '';
+      if (typed && /^https?:\/\//i.test(typed)) {
+        return typed;
+      }
+
+      // Si la página ya está alojada en GitHub Pages / Vercel / Netlify, usar su propia URL con ?vista=3d
+      const loc = window.location.href;
+      if (/^https?:\/\//i.test(loc) && !loc.includes('localhost') && !loc.includes('127.0.0.1') && !loc.includes('googleusercontent') && !loc.includes('blob:')) {
+        const base = loc.split('#')[0].split('?')[0];
+        return base + '?vista=3d';
+      }
+
+      // URL pública corta y limpia para lectura inmediata por cámara móvil
+      return 'https://uaemex.mx/?ihm=2026B&edificio=B&carrera=ICO&alumno=JuanGerardoSanchez';
+    }
+
+    /**
+     * Genera un Código QR estándar ISO/IEC 18004 real en el canvas imprimible
+     * con zona de silencio blanca y corrección de errores nivel M para lectura rápida en celular
+     */
+    function drawArMarkerCanvas() {
+      const canvas = document.getElementById('arMarkerCanvas');
+      if (!canvas) return;
+
+      const targetValue = getEffectiveQrUrl();
+      const previewLabel = document.getElementById('qr-encoded-preview');
+      if (previewLabel) {
+        previewLabel.textContent = qrMode === 'ficha'
+          ? 'Texto Ficha ID + Edificio B (ICO)'
+          : targetValue;
+        previewLabel.title = targetValue;
+      }
+
+      const size = 440;
+      canvas.width = size;
+      canvas.height = size;
+      const ctx = canvas.getContext('2d');
+
+      // Fondo blanco puro para máximo contraste con la cámara
+      ctx.fillStyle = '#ffffff';
+      ctx.fillRect(0, 0, size, size);
+
+      if (typeof qrcode !== 'undefined') {
+        const qr = qrcode(0, 'M');
+        qr.addData(targetValue);
+        qr.make();
+
+        const moduleCount = qr.getModuleCount();
+        const quietModules = 4; // Zona de silencio reglamentaria de 4 módulos
+        const totalModules = moduleCount + quietModules * 2;
+        const cellSize = size / totalModules;
+
+        ctx.fillStyle = '#000000';
+        for (let row = 0; row < moduleCount; row++) {
+          for (let col = 0; col < moduleCount; col++) {
+            if (qr.isDark(row, col)) {
+              const x = Math.round((col + quietModules) * cellSize);
+              const y = Math.round((row + quietModules) * cellSize);
+              const w = Math.ceil(cellSize);
+              const h = Math.ceil(cellSize);
+              ctx.fillRect(x, y, w, h);
+            }
+          }
+        }
+      } else {
+        ctx.fillStyle = '#090d16';
+        ctx.font = '700 16px Inter, sans-serif';
+        ctx.textAlign = 'center';
+        ctx.fillText('Conéctate a internet para renderizar el QR', size / 2, size / 2);
+      }
+    }
+
+    function updateQrCodeFromInput() {
+      qrMode = 'webar';
+      drawArMarkerCanvas();
+    }
+
+    function useCurrentPageUrl() {
+      const inputEl = document.getElementById('qr-target-url');
+      const loc = window.location.href.split('#')[0].split('?')[0];
+      if (/^https?:\/\//i.test(loc) && !loc.includes('googleusercontent') && !loc.includes('blob:')) {
+        qrMode = 'webar';
+        if (inputEl) inputEl.value = loc + '?vista=3d';
+        drawArMarkerCanvas();
+        showToast('Código QR actualizado con la URL actual.');
+      } else {
+        showToast('Sube index.html a GitHub Pages y pega aquí tu enlace https://tu-usuario.github.io/...');
+      }
+    }
+
+    function setQrPreset(type) {
+      qrMode = type;
+      drawArMarkerCanvas();
+      const label = document.getElementById('markerSeedLabel');
+      if (label) {
+        label.textContent = type === 'ficha' ? 'FICHA TEXTO DIRECTO' : 'ENLACE WEBAR 3D';
+      }
+      showToast(
+        type === 'ficha'
+          ? 'QR cambiado a Ficha Directa: escanéalo con tu celular para ver tus datos y carrera ICO.'
+          : 'QR cambiado a Enlace WebAR 3D.'
+      );
+    }
+
+    function showToast(message) {
+      const toast = document.getElementById('status-toast');
+      const textEl = document.getElementById('status-toast-text');
+      if (!toast || !textEl) return;
+      textEl.textContent = message;
+      toast.classList.remove('hidden');
+      clearTimeout(window.__toastTimer);
+      window.__toastTimer = setTimeout(() => {
+        hideToast();
+      }, 4000);
+    }
+
+    function hideToast() {
+      const toast = document.getElementById('status-toast');
+      if (toast) toast.classList.add('hidden');
+    }
+
+    /**
+     * Alterna entre la vista Imprimible y la vista 3D / WebAR
+     */
+    function switchTab(tabName) {
+      currentTab = tabName;
+      const viewPrintable = document.getElementById('view-printable');
+      const viewWebar = document.getElementById('view-webar');
+      const tabPrintable = document.getElementById('tab-printable');
+      const tabWebar = document.getElementById('tab-webar');
+
+      if (!viewPrintable || !viewWebar || !tabPrintable || !tabWebar) return;
+
+      if (tabName === 'printable') {
+        viewPrintable.classList.remove('hidden');
+        viewWebar.classList.add('hidden');
+
+        tabPrintable.setAttribute('aria-selected', 'true');
+        tabPrintable.className = 'px-3.5 py-2.5 rounded-xl text-xs sm:text-sm font-semibold transition-all flex items-center gap-2 bg-emerald-600 text-white shadow';
+
+        tabWebar.setAttribute('aria-selected', 'false');
+        tabWebar.className = 'px-3.5 py-2.5 rounded-xl text-xs sm:text-sm font-semibold transition-all flex items-center gap-2 text-slate-300 hover:text-white';
+      } else {
+        viewPrintable.classList.add('hidden');
+        viewWebar.classList.remove('hidden');
+
+        tabWebar.setAttribute('aria-selected', 'true');
+        tabWebar.className = 'px-3.5 py-2.5 rounded-xl text-xs sm:text-sm font-semibold transition-all flex items-center gap-2 bg-emerald-600 text-white shadow';
+
+        tabPrintable.setAttribute('aria-selected', 'false');
+        tabPrintable.className = 'px-3.5 py-2.5 rounded-xl text-xs sm:text-sm font-semibold transition-all flex items-center gap-2 text-slate-300 hover:text-white';
+
+        if (!threeInitialized) {
+          initThreeScene();
+        } else {
+          resizeThreeScene();
+        }
+      }
+    }
+
+    /**
+     * Cambia entre Simulación de Cámara / Marcador y Explorar 3D
+     */
+    function setSceneMode(mode) {
+      sceneMode = mode;
+      const btnCam = document.getElementById('btn-mode-camera');
+      const btnExp = document.getElementById('btn-mode-explore');
+      const hud = document.getElementById('camera-hud-overlay');
+      const btnLock = document.getElementById('btn-toggle-marker-lock');
+
+      if (mode === 'camera') {
+        if (btnCam) btnCam.className = 'px-3.5 py-2 rounded-lg text-xs sm:text-sm font-semibold bg-emerald-600 text-white shadow transition';
+        if (btnExp) btnExp.className = 'px-3.5 py-2 rounded-lg text-xs sm:text-sm font-semibold text-slate-300 hover:text-white transition';
+        if (hud) hud.classList.remove('hidden');
+        if (btnLock) btnLock.classList.remove('hidden');
+        if (markerBaseGroup) markerBaseGroup.visible = true;
+        if (gridHelper) gridHelper.visible = false;
+        if (buildingGroup) buildingGroup.visible = markerDetected;
+      } else {
+        if (btnExp) btnExp.className = 'px-3.5 py-2 rounded-lg text-xs sm:text-sm font-semibold bg-emerald-600 text-white shadow transition';
+        if (btnCam) btnCam.className = 'px-3.5 py-2 rounded-lg text-xs sm:text-sm font-semibold text-slate-300 hover:text-white transition';
+        if (hud) hud.classList.add('hidden');
+        if (btnLock) btnLock.classList.add('hidden');
+        if (markerBaseGroup) markerBaseGroup.visible = false;
+        if (gridHelper) gridHelper.visible = true;
+        if (buildingGroup) buildingGroup.visible = true;
+      }
+    }
+
+    function toggleMarkerDetected() {
+      markerDetected = !markerDetected;
+      const btnLock = document.getElementById('btn-toggle-marker-lock');
+      const hudLabel = document.getElementById('hud-mode-label');
+      const reticleText = document.getElementById('reticle-status-text');
+
+      if (markerDetected) {
+        if (btnLock) btnLock.textContent = 'Simular Detección: Activa';
+        if (hudLabel) hudLabel.textContent = 'CÁMARA AR · MARCADOR DETECTADO';
+        if (reticleText) reticleText.textContent = 'Anclaje 3D activo sobre marcador';
+        if (buildingGroup) buildingGroup.visible = true;
+      } else {
+        if (btnLock) btnLock.textContent = 'Simular Detección: Buscando...';
+        if (hudLabel) hudLabel.textContent = 'CÁMARA AR · BUSCANDO MARCADOR';
+        if (reticleText) reticleText.textContent = 'Apunta al marcador impreso...';
+        if (buildingGroup && sceneMode === 'camera') buildingGroup.visible = false;
+      }
+    }
+
+    /**
+     * Crea una textura de letrero institucional dorado/amarillo para la franja verde
+     */
+    function createSignTexture(title, subtitle) {
+      const c = document.createElement('canvas');
+      c.width = 1024;
+      c.height = 192;
+      const ctx = c.getContext('2d');
+
+      ctx.fillStyle = '#1d5b34';
+      ctx.fillRect(0, 0, c.width, c.height);
+
+      ctx.beginPath();
+      ctx.arc(68, 96, 40, 0, Math.PI * 2);
+      ctx.fillStyle = '#eab308';
+      ctx.fill();
+      ctx.lineWidth = 4;
+      ctx.strokeStyle = '#fef08a';
+      ctx.stroke();
+
+      ctx.fillStyle = '#1d5b34';
+      ctx.font = '800 22px Inter, sans-serif';
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.fillText('UAEM', 68, 97);
+
+      ctx.fillStyle = '#fef08a';
+      ctx.font = '700 40px Inter, sans-serif';
+      ctx.textAlign = 'left';
+      ctx.fillText(title, 128, 72);
+
+      ctx.fillStyle = '#facc15';
+      ctx.font = '600 30px Inter, sans-serif';
+      ctx.fillText(subtitle, 128, 126);
+
+      const tex = new THREE.CanvasTexture(c);
+      tex.needsUpdate = true;
+      return tex;
+    }
+
+    /**
+     * Crea la letra "B" tridimensional en relieve para la esquina superior izquierda
+     */
+    function createReliefLetterB(material) {
+      const letterGroup = new THREE.Group();
+
+      const stem = new THREE.Mesh(new THREE.BoxGeometry(0.08, 0.34, 0.05), material);
+      stem.position.set(-0.08, 0, 0);
+
+      const topBar = new THREE.Mesh(new THREE.BoxGeometry(0.20, 0.065, 0.05), material);
+      topBar.position.set(0.01, 0.137, 0);
+
+      const midBar = new THREE.Mesh(new THREE.BoxGeometry(0.19, 0.06, 0.05), material);
+      midBar.position.set(0.005, 0.005, 0);
+
+      const botBar = new THREE.Mesh(new THREE.BoxGeometry(0.21, 0.065, 0.05), material);
+      botBar.position.set(0.015, -0.137, 0);
+
+      const upperBowl = new THREE.Mesh(new THREE.BoxGeometry(0.075, 0.14, 0.05), material);
+      upperBowl.position.set(0.095, 0.075, 0);
+
+      const lowerBowl = new THREE.Mesh(new THREE.BoxGeometry(0.08, 0.15, 0.05), material);
+      lowerBowl.position.set(0.10, -0.072, 0);
+
+      letterGroup.add(stem, topBar, midBar, botBar, upperBowl, lowerBowl);
+      return letterGroup;
+    }
+
+    /**
+     * Crea un árbol estilizado para dar contexto realista alrededor del edificio
+     */
+    function createStylizedTree(scale = 1, variant = 0) {
+      const tree = new THREE.Group();
+      const trunkMat = new THREE.MeshStandardMaterial({ color: 0x5c4033, roughness: 0.9 });
+      const foliageColors = [0x2d6a4f, 0x40916c, 0x386641];
+      const foliageMat = new THREE.MeshStandardMaterial({
+        color: foliageColors[variant % foliageColors.length],
+        roughness: 0.85
+      });
+
+      const trunk = new THREE.Mesh(
+        new THREE.CylinderGeometry(0.045 * scale, 0.07 * scale, 0.65 * scale, 8),
+        trunkMat
+      );
+      trunk.position.y = 0.325 * scale;
+      trunk.castShadow = true;
+      tree.add(trunk);
+
+      const crown1 = new THREE.Mesh(new THREE.DodecahedronGeometry(0.32 * scale, 1), foliageMat);
+      crown1.position.set(0, 0.78 * scale, 0);
+      crown1.castShadow = true;
+      tree.add(crown1);
+
+      const crown2 = new THREE.Mesh(new THREE.DodecahedronGeometry(0.23 * scale, 1), foliageMat);
+      crown2.position.set(0.14 * scale, 0.95 * scale, 0.06 * scale);
+      crown2.castShadow = true;
+      tree.add(crown2);
+
+      return tree;
+    }
+
+    /**
+     * Inicializa la escena Three.js del Edificio B - CU UAEM Valle de Teotihuacán
+     * - 2 pisos (Planta Baja y Primer Nivel), fachada horizontal alargada
+     * - Verde bosque institucional y blanco con faldón divisorio
+     * - Entrada principal central de doble altura y 2 salidas laterales
+     */
+    function initThreeScene() {
+      const canvas = document.getElementById('threeCanvas');
+      if (!canvas || typeof THREE === 'undefined') return;
+
+      try {
+        threeScene = new THREE.Scene();
+        threeScene.background = new THREE.Color('#0B1120');
+
+        const width = canvas.clientWidth || 800;
+        const height = canvas.clientHeight || 520;
+
+        threeCamera = new THREE.PerspectiveCamera(44, width / height, 0.1, 100);
+        cameraDistance = 8.4;
+        threeCamera.position.set(0, 3.2, cameraDistance);
+        threeCamera.lookAt(0, 0.85, 0);
+
+        threeRenderer = new THREE.WebGLRenderer({ canvas: canvas, antialias: true });
+        threeRenderer.setSize(width, height, false);
+        threeRenderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
+        threeRenderer.shadowMap.enabled = true;
+        threeRenderer.shadowMap.type = THREE.PCFSoftShadowMap;
+
+        const ambientLight = new THREE.AmbientLight(0xffffff, 0.78);
+        threeScene.add(ambientLight);
+
+        const dirLight = new THREE.DirectionalLight(0xfffbeb, 1.05);
+        dirLight.position.set(7, 11, 8);
+        dirLight.castShadow = true;
+        dirLight.shadow.mapSize.width = 1024;
+        dirLight.shadow.mapSize.height = 1024;
+        threeScene.add(dirLight);
+
+        const rimLight = new THREE.DirectionalLight(0x34d399, 0.42);
+        rimLight.position.set(-7, 5, -6);
+        threeScene.add(rimLight);
+
+        gridHelper = new THREE.GridHelper(14, 14, 0x334155, 0x1e293b);
+        gridHelper.position.y = -0.02;
+        gridHelper.visible = false;
+        threeScene.add(gridHelper);
+
+        markerBaseGroup = new THREE.Group();
+        const padGeo = new THREE.BoxGeometry(6.8, 0.05, 4.4);
+        const padMat = new THREE.MeshStandardMaterial({ color: 0xf8fafc, roughness: 0.75 });
+        const padMesh = new THREE.Mesh(padGeo, padMat);
+        padMesh.position.y = -0.025;
+        padMesh.receiveShadow = true;
+        markerBaseGroup.add(padMesh);
+
+        const borderMat = new THREE.MeshStandardMaterial({ color: 0x090d16, roughness: 0.6 });
+        const borderTop = new THREE.Mesh(new THREE.BoxGeometry(6.82, 0.07, 0.28), borderMat);
+        borderTop.position.set(0, -0.015, -2.06);
+        const borderBot = new THREE.Mesh(new THREE.BoxGeometry(6.82, 0.07, 0.28), borderMat);
+        borderBot.position.set(0, -0.015, 2.06);
+        const borderLeft = new THREE.Mesh(new THREE.BoxGeometry(0.28, 0.07, 4.4), borderMat);
+        borderLeft.position.set(-3.26, -0.015, 0);
+        const borderRight = new THREE.Mesh(new THREE.BoxGeometry(0.28, 0.07, 4.4), borderMat);
+        borderRight.position.set(3.26, -0.015, 0);
+        markerBaseGroup.add(borderTop, borderBot, borderLeft, borderRight);
+        threeScene.add(markerBaseGroup);
+
+        buildingGroup = new THREE.Group();
+
+        const uaemForestGreen = new THREE.MeshStandardMaterial({ color: 0x1d5b34, roughness: 0.55 });
+        const uaemDarkGreen = new THREE.MeshStandardMaterial({ color: 0x164628, roughness: 0.6 });
+        const facadeWhite = new THREE.MeshStandardMaterial({ color: 0xf4f6f5, roughness: 0.5 });
+        const creamLetterMat = new THREE.MeshStandardMaterial({ color: 0xf8fafc, roughness: 0.35 });
+        const tintedGlassMat = new THREE.MeshStandardMaterial({
+          color: 0x16202a,
+          roughness: 0.18,
+          metalness: 0.55
+        });
+        const mullionMat = new THREE.MeshStandardMaterial({ color: 0x263238, roughness: 0.5 });
+        const roofMat = new THREE.MeshStandardMaterial({ color: 0xdbe2df, roughness: 0.75 });
+        const grassMat = new THREE.MeshStandardMaterial({ color: 0x558b2f, roughness: 0.9 });
+        const walkwayStoneMat = new THREE.MeshStandardMaterial({ color: 0xe7e5e4, roughness: 0.8 });
+        const brickPathMat = new THREE.MeshStandardMaterial({ color: 0xc29b82, roughness: 0.82 });
+
+        // 1. Entorno exterior: pasto y andadores
+        const lawnBase = new THREE.Mesh(new THREE.BoxGeometry(6.1, 0.04, 3.7), grassMat);
+        lawnBase.position.set(0, 0.02, 0.15);
+        lawnBase.receiveShadow = true;
+        buildingGroup.add(lawnBase);
+
+        const perimeterWalk = new THREE.Mesh(new THREE.BoxGeometry(5.55, 0.05, 1.85), walkwayStoneMat);
+        perimeterWalk.position.set(0, 0.03, 0);
+        perimeterWalk.receiveShadow = true;
+        buildingGroup.add(perimeterWalk);
+
+        const centerWalkStone = new THREE.Mesh(new THREE.BoxGeometry(0.95, 0.055, 1.35), walkwayStoneMat);
+        centerWalkStone.position.set(-0.1, 0.032, 1.3);
+        centerWalkStone.receiveShadow = true;
+        buildingGroup.add(centerWalkStone);
+
+        const centerWalkBrick = new THREE.Mesh(new THREE.BoxGeometry(0.65, 0.058, 1.35), brickPathMat);
+        centerWalkBrick.position.set(0.45, 0.034, 1.3);
+        centerWalkBrick.receiveShadow = true;
+        buildingGroup.add(centerWalkBrick);
+
+        const leftSideWalk = new THREE.Mesh(new THREE.BoxGeometry(0.65, 0.055, 2.2), walkwayStoneMat);
+        leftSideWalk.position.set(-2.78, 0.032, 0.35);
+        leftSideWalk.receiveShadow = true;
+        buildingGroup.add(leftSideWalk);
+
+        const rightSideWalk = new THREE.Mesh(new THREE.BoxGeometry(0.65, 0.055, 2.2), walkwayStoneMat);
+        rightSideWalk.position.set(2.78, 0.032, 0.35);
+        rightSideWalk.receiveShadow = true;
+        buildingGroup.add(rightSideWalk);
+
+        const treePositions = [
+          { x: -2.75, z: -1.25, s: 0.95, v: 0 },
+          { x: 2.75, z: -1.2, s: 1.0, v: 1 },
+          { x: -2.15, z: 1.55, s: 0.72, v: 2 },
+          { x: 2.15, z: 1.55, s: 0.78, v: 0 },
+          { x: 1.35, z: 1.68, s: 0.62, v: 1 }
+        ];
+        treePositions.forEach((tp) => {
+          const t = createStylizedTree(tp.s, tp.v);
+          t.position.set(tp.x, 0.04, tp.z);
+          buildingGroup.add(t);
+        });
+
+        // 2. Volumen principal de dos pisos (Planta Baja y Primer Nivel)
+        const buildingWidth = 4.9;
+        const buildingHeight = 1.72;
+        const buildingDepth = 1.32;
+
+        const basePlinth = new THREE.Mesh(
+          new THREE.BoxGeometry(buildingWidth + 0.06, 0.10, buildingDepth + 0.06),
+          uaemDarkGreen
+        );
+        basePlinth.position.set(0, 0.09, 0);
+        basePlinth.receiveShadow = true;
+        buildingGroup.add(basePlinth);
+
+        const mainBody = new THREE.Mesh(
+          new THREE.BoxGeometry(buildingWidth, buildingHeight, buildingDepth),
+          facadeWhite
+        );
+        mainBody.position.set(0, 0.14 + buildingHeight / 2, 0);
+        mainBody.castShadow = true;
+        mainBody.receiveShadow = true;
+        buildingGroup.add(mainBody);
+
+        const roofDeck = new THREE.Mesh(
+          new THREE.BoxGeometry(buildingWidth - 0.06, 0.05, buildingDepth - 0.06),
+          roofMat
+        );
+        roofDeck.position.set(0, 0.14 + buildingHeight + 0.01, 0);
+        buildingGroup.add(roofDeck);
+
+        // 3. Franja superior verde bosque y faldón blanco intermedio
+        const topFasciaHeight = 0.34;
+        const topFascia = new THREE.Mesh(
+          new THREE.BoxGeometry(buildingWidth + 0.08, topFasciaHeight, buildingDepth + 0.08),
+          uaemForestGreen
+        );
+        topFascia.position.set(0, 0.14 + buildingHeight - topFasciaHeight / 2 + 0.03, 0);
+        topFascia.castShadow = true;
+        buildingGroup.add(topFascia);
+
+        const midBeltY = 0.96;
+        [-1.48, 1.48].forEach((wingX) => {
+          const slopedApron = new THREE.Mesh(
+            new THREE.BoxGeometry(1.94, 0.22, buildingDepth + 0.14),
+            facadeWhite
+          );
+          slopedApron.position.set(wingX, midBeltY, 0);
+          slopedApron.castShadow = true;
+          buildingGroup.add(slopedApron);
+
+          const apronLip = new THREE.Mesh(
+            new THREE.BoxGeometry(1.94, 0.04, buildingDepth + 0.16),
+            uaemDarkGreen
+          );
+          apronLip.position.set(wingX, midBeltY - 0.11, 0);
+          buildingGroup.add(apronLip);
+        });
+
+        // 4. Columnas estructurales verticales verdes
+        const columnPositionsX = [-2.42, -1.62, -0.82, 0.82, 1.62, 2.42];
+        columnPositionsX.forEach((cx) => {
+          const colFront = new THREE.Mesh(
+            new THREE.BoxGeometry(0.16, buildingHeight + 0.02, 0.12),
+            uaemForestGreen
+          );
+          colFront.position.set(cx, 0.14 + buildingHeight / 2, buildingDepth / 2 + 0.03);
+          colFront.castShadow = true;
+          buildingGroup.add(colFront);
+
+          const colBack = new THREE.Mesh(
+            new THREE.BoxGeometry(0.16, buildingHeight + 0.02, 0.12),
+            uaemForestGreen
+          );
+          colBack.position.set(cx, 0.14 + buildingHeight / 2, -buildingDepth / 2 - 0.03);
+          colBack.castShadow = true;
+          buildingGroup.add(colBack);
+        });
+
+        // 5. Entrada principal en medio (módulo central verde de doble altura)
+        const centerModuleWidth = 0.92;
+        const centerModule = new THREE.Mesh(
+          new THREE.BoxGeometry(centerModuleWidth, buildingHeight + 0.05, buildingDepth + 0.12),
+          uaemForestGreen
+        );
+        centerModule.position.set(0, 0.14 + buildingHeight / 2 + 0.01, 0);
+        centerModule.castShadow = true;
+        buildingGroup.add(centerModule);
+
+        [1, -1].forEach((dirZ) => {
+          const zSurface = dirZ * (buildingDepth / 2 + 0.065);
+
+          const atriumGlass = new THREE.Mesh(
+            new THREE.BoxGeometry(0.64, 1.38, 0.03),
+            tintedGlassMat
+          );
+          atriumGlass.position.set(0, 0.84, zSurface);
+          buildingGroup.add(atriumGlass);
+
+          [-0.21, 0, 0.21].forEach((mx) => {
+            const vBar = new THREE.Mesh(new THREE.BoxGeometry(0.022, 1.38, 0.045), mullionMat);
+            vBar.position.set(mx, 0.84, zSurface + dirZ * 0.005);
+            buildingGroup.add(vBar);
+          });
+
+          [0.52, 0.96, 1.32].forEach((my) => {
+            const hBar = new THREE.Mesh(new THREE.BoxGeometry(0.64, 0.022, 0.045), mullionMat);
+            hBar.position.set(0, my, zSurface + dirZ * 0.005);
+            buildingGroup.add(hBar);
+          });
+
+          const mainDoubleDoor = new THREE.Mesh(
+            new THREE.BoxGeometry(0.42, 0.36, 0.05),
+            new THREE.MeshStandardMaterial({ color: 0x090d16, roughness: 0.3 })
+          );
+          mainDoubleDoor.position.set(0, 0.32, zSurface + dirZ * 0.01);
+          buildingGroup.add(mainDoubleDoor);
+        });
+
+        // 6. Dos salidas laterales (extremo izquierdo y extremo derecho)
+        [-1, 1].forEach((sideSign) => {
+          const sideX = sideSign * (buildingWidth / 2);
+
+          [-buildingDepth / 2, buildingDepth / 2].forEach((cornerZ) => {
+            const endCornerCol = new THREE.Mesh(
+              new THREE.BoxGeometry(0.14, buildingHeight + 0.02, 0.14),
+              uaemForestGreen
+            );
+            endCornerCol.position.set(sideX, 0.14 + buildingHeight / 2, cornerZ);
+            buildingGroup.add(endCornerCol);
+          });
+
+          const sideDoorFrame = new THREE.Mesh(
+            new THREE.BoxGeometry(0.06, 0.56, 0.46),
+            uaemForestGreen
+          );
+          sideDoorFrame.position.set(sideX + sideSign * 0.015, 0.42, 0);
+          buildingGroup.add(sideDoorFrame);
+
+          const sideDoorLeaf = new THREE.Mesh(
+            new THREE.BoxGeometry(0.07, 0.50, 0.38),
+            tintedGlassMat
+          );
+          sideDoorLeaf.position.set(sideX + sideSign * 0.02, 0.39, 0);
+          buildingGroup.add(sideDoorLeaf);
+
+          const sideCanopy = new THREE.Mesh(
+            new THREE.BoxGeometry(0.22, 0.05, 0.56),
+            uaemForestGreen
+          );
+          sideCanopy.position.set(sideX + sideSign * 0.10, 0.72, 0);
+          buildingGroup.add(sideCanopy);
+
+          const sideUpperWin = new THREE.Mesh(
+            new THREE.BoxGeometry(0.05, 0.36, 0.52),
+            tintedGlassMat
+          );
+          sideUpperWin.position.set(sideX + sideSign * 0.015, 1.30, 0);
+          buildingGroup.add(sideUpperWin);
+        });
+
+        // 7. Ventanales horizontales modulares (Planta Baja y Segundo Piso)
+        const bayCentersX = [-2.02, -1.22, 1.22, 2.02];
+        bayCentersX.forEach((bx) => {
+          [1, -1].forEach((dirZ) => {
+            const faceZ = dirZ * (buildingDepth / 2 + 0.01);
+
+            const winLower = new THREE.Mesh(
+              new THREE.BoxGeometry(0.64, 0.46, 0.03),
+              tintedGlassMat
+            );
+            winLower.position.set(bx, 0.60, faceZ);
+            buildingGroup.add(winLower);
+
+            const winUpper = new THREE.Mesh(
+              new THREE.BoxGeometry(0.64, 0.44, 0.03),
+              tintedGlassMat
+            );
+            winUpper.position.set(bx, 1.31, faceZ);
+            buildingGroup.add(winUpper);
+
+            [-0.16, 0.16].forEach((subX) => {
+              const mLow = new THREE.Mesh(new THREE.BoxGeometry(0.018, 0.46, 0.04), mullionMat);
+              mLow.position.set(bx + subX, 0.60, faceZ + dirZ * 0.004);
+              buildingGroup.add(mLow);
+
+              const mUp = new THREE.Mesh(new THREE.BoxGeometry(0.018, 0.44, 0.04), mullionMat);
+              mUp.position.set(bx + subX, 1.31, faceZ + dirZ * 0.004);
+              buildingGroup.add(mUp);
+            });
+          });
+        });
+
+        // 8. Letra "B" en relieve y letrero institucional dorado
+        const letterB = createReliefLetterB(creamLetterMat);
+        letterB.position.set(-2.24, 1.71, buildingDepth / 2 + 0.055);
+        buildingGroup.add(letterB);
+
+        const signTexture = createSignTexture(
+          'Universidad Autónoma del Estado de México',
+          'Centro Universitario Valle de Teotihuacán'
+        );
+        const signMat = new THREE.MeshBasicMaterial({ map: signTexture });
+        const signMesh = new THREE.Mesh(new THREE.BoxGeometry(1.75, 0.28, 0.03), signMat);
+        signMesh.position.set(1.42, 1.71, buildingDepth / 2 + 0.045);
+        buildingGroup.add(signMesh);
+
+        threeScene.add(buildingGroup);
+
+        setupCameraControls(canvas);
+
+        window.addEventListener('resize', resizeThreeScene);
+        threeInitialized = true;
+        animateThreeScene();
+      } catch (err) {
+        showToast('No fue posible inicializar la escena 3D en este navegador.');
+      }
+    }
+
+    /**
+     * Configura rotación táctil y de ratón sobre el canvas 3D
+     */
+    function setupCameraControls(canvas) {
+      const onPointerDown = (clientX, clientY) => {
+        isDragging = true;
+        prevPointer = { x: clientX, y: clientY };
+      };
+
+      const onPointerMove = (clientX, clientY) => {
+        if (!isDragging) return;
+        const dx = clientX - prevPointer.x;
+        const dy = clientY - prevPointer.y;
+        prevPointer = { x: clientX, y: clientY };
+
+        targetRotation.y += dx * 0.008;
+        targetRotation.x = Math.max(0.08, Math.min(1.25, targetRotation.x + dy * 0.008));
+      };
+
+      const onPointerUp = () => {
+        isDragging = false;
+      };
+
+      canvas.addEventListener('mousedown', (e) => onPointerDown(e.clientX, e.clientY));
+      window.addEventListener('mousemove', (e) => onPointerMove(e.clientX, e.clientY));
+      window.addEventListener('mouseup', onPointerUp);
+
+      canvas.addEventListener('touchstart', (e) => {
+        if (e.touches.length > 0) {
+          onPointerDown(e.touches[0].clientX, e.touches[0].clientY);
+        }
+      }, { passive: true });
+
+      canvas.addEventListener('touchmove', (e) => {
+        if (e.touches.length > 0) {
+          onPointerMove(e.touches[0].clientX, e.touches[0].clientY);
+        }
+      }, { passive: true });
+
+      canvas.addEventListener('touchend', onPointerUp);
+    }
+
+    function resetCameraView() {
+      targetRotation = { x: 0.36, y: -0.52 };
+      cameraDistance = 8.4;
+      showToast('Ángulo de cámara restablecido.');
+    }
+
+    function resizeThreeScene() {
+      const canvas = document.getElementById('threeCanvas');
+      if (!canvas || !threeRenderer || !threeCamera) return;
+      const width = canvas.clientWidth || 800;
+      const height = canvas.clientHeight || 520;
+      threeCamera.aspect = width / height;
+      threeCamera.updateProjectionMatrix();
+      threeRenderer.setSize(width, height, false);
+    }
+
+    function animateThreeScene() {
+      requestAnimationFrame(animateThreeScene);
+      if (!threeRenderer || !threeScene || !threeCamera) return;
+
+      currentRotation.x += (targetRotation.x - currentRotation.x) * 0.1;
+      currentRotation.y += (targetRotation.y - currentRotation.y) * 0.1;
+
+      threeCamera.position.x = cameraDistance * Math.sin(currentRotation.y) * Math.cos(currentRotation.x);
+      threeCamera.position.y = Math.max(0.6, cameraDistance * Math.sin(currentRotation.x));
+      threeCamera.position.z = cameraDistance * Math.cos(currentRotation.y) * Math.cos(currentRotation.x);
+      threeCamera.lookAt(0, 1.15, 0);
+
+      if (buildingGroup && buildingGroup.visible && sceneMode === 'camera') {
+        buildingGroup.position.y = Math.sin(performance.now() * 0.0025) * 0.04;
+      } else if (buildingGroup) {
+        buildingGroup.position.y = 0;
+      }
+
+      threeRenderer.render(threeScene, threeCamera);
+    }
+
+    /**
+     * Copia el código AR.js + A-Frame al portapapeles usando document.execCommand('copy')
+     */
+    function copyWebArSnippet() {
+      const codeEl = document.getElementById('webar-code-snippet');
+      if (!codeEl) return;
+
+      const textArea = document.createElement('textarea');
+      textArea.value = codeEl.textContent;
+      textArea.style.position = 'fixed';
+      textArea.style.opacity = '0';
+      document.body.appendChild(textArea);
+      textArea.focus();
+      textArea.select();
+
+      try {
+        const ok = document.execCommand('copy');
+        if (ok) {
+          showToast('Código AR.js + A-Frame copiado al portapapeles.');
+        } else {
+          showToast('No se pudo copiar automáticamente; selecciona el código manualmente.');
+        }
+      } catch (e) {
+        showToast('No se pudo copiar automáticamente; selecciona el código manualmente.');
+      }
+
+      document.body.removeChild(textArea);
+    }
+
+    // Inicialización al cargar la página
+    window.addEventListener('DOMContentLoaded', () => {
+      const inputEl = document.getElementById('qr-target-url');
+      const loc = window.location.href.split('#')[0].split('?')[0];
+      if (inputEl && /^https?:\/\//i.test(loc) && !loc.includes('localhost') && !loc.includes('127.0.0.1') && !loc.includes('googleusercontent') && !loc.includes('blob:')) {
+        inputEl.value = loc + '?vista=3d';
+      }
+
+      drawArMarkerCanvas();
+
+      // Si el usuario abre el enlace desde el QR con ?vista=3d, abrir directamente la vista 3D y AR
+      const params = new URLSearchParams(window.location.search);
+      if (params.get('vista') === '3d') {
+        switchTab('webar');
+      }
+    });
+  </script>
+</body>
+</html>
